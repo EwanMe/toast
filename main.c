@@ -3,13 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-// sleep()
-#ifdef _WIN32
-    #include <Windows.h>
-#else
-    #include <unistd.h>
-#endif
+#include <unistd.h>
 
 long get_temp(char *path) {
     FILE *temp_file = fopen(path, "r");
@@ -60,6 +54,9 @@ char* get_temp_path() {
         (void) closedir(dp);
 
         if (strcmp(temp_path, "") != 0) return temp_path;
+
+        perror("Could not find CPU thermal zone.");
+        exit(EXIT_FAILURE);
     }
     
     perror("Could not open directory.");
