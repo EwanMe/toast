@@ -16,53 +16,6 @@ long get_temp(char *path) {
     return temp;
 }
 
-int get_temp_path(char *t_path, size_t p_len) {
-    memset(t_path, 0x00, p_len);
-    DIR *dp;
-    struct dirent *ep;
-
-    const char *path = "/sys/class/thermal";
-    dp = opendir(path);
-    if (dp != NULL) {
-        char *temp_path = malloc(512);
-        temp_path[512] = '\0';
-
-        FILE *file;
-
-        while ( (ep = readdir(dp)) ) {
-            char prefix[12];
-            memcpy(prefix, &ep->d_name, 12);
-            prefix[12] = '\0';
-
-            if (strcmp(prefix, "thermal_zone") == 0) {
-                char zone_path[128];
-                char type_path[255];
-                if (snprintf(zone_path, 128, "%s/%s", path, ep->d_name) < 0) abort();
-                if (snprintf(type_path, 255, "%s/type", zone_path) < 0) abort();
-
-                file = fopen(type_path, "r");
-                if (file == NULL) continue;
-                
-                char type[32];
-                if (fgets(type, 32, file) == NULL) printf("Couldn't read from file\n");
-                else {
-                    type[strcspn(type, "\n")] = '\0';
-                    if (strcmp(type, "x86_pkg_temp") ==  0) {
-                        if (snprintf(temp_path, 512, "%s/temp", zone_path) < 0) abort();
-                        strncpy(t_path, temp_path, strlen(temp_path));
-                        t_path[strlen(temp_path)] = '\0';
-                        fclose(file);
-                        return 0;
-                    }
-                }
-                fclose(file);
-            }
-        }
-        (void) closedir(dp);
-    }
-    return -1;
-}
-
 int get_num_thermal_zones() {
     int num_zones = 0;
 
@@ -114,20 +67,47 @@ int main() {
     print_header();
     
     int num_zones = get_num_thermal_zones();
-    
-    char *path = malloc(sizeof(char) * 512);
-    if (get_temp_path(path, 512) == 0) {
-        
-        long temp;
 
-        while ( (temp = get_temp(path)) ) {
-            mvprintw(5, 1, "CPU temperature: %5ld", temp);
-            refresh();
-            sleep(1);
-        }
+    char **paths = malloc(num_zones * sizeof(char *));
+    char **types = malloc(num_zones * sizeof(char *));
+
+    const char *base_p = "/sys/class/thermal/thermal_zone";
+    
+    for (int i = 0; i < num_zones; ++i) {
+        int path_len = strlen(base_p) + strlen("/temp") + 3;
+        paths[i] = malloc(path_len * sizeof (char));
+        snprintf(paths[i], path_len, "%s%d/temp", base_p, i);
+        
+        char *type_p = malloc(path_len * sizeof (char));
+        snprintf(type_p, path_len, "%s%d/type", base_p, i);
+
+        FILE *f = fopen(type_p, "r");
+        
+        types[i] = malloc(64);
+        memset(types[i], 0x00, 64);
+        fscanf(f, "%s", types[i]);
+        fclose(f);
     }
 
-    if (path != NULL) free(path);
+    while (1) {
+        for (int i = 0; i < num_zones; ++i) {
+            long temp = get_temp(paths[i]);
+            mvprintw(5 + i, 1, "%s: %5ld", types[i], temp);
+            refresh();
+        }
+        sleep(1);
+    }
+
+    for (int i = 0; i < num_zones; ++i) {
+        free(paths[i]);
+    }
+    free(paths);
+
+    for (int i = 0; i < num_zones; ++i) {
+        free(types[i]);
+    }
+    free(types);
+
     curs_set(1);
     endwin();
     return 0;
