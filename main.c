@@ -48,13 +48,20 @@ void print_header() {
     mvprintw(3, 1, "▀▄▄▄▄▄▀▀▄▄▄▀▀▀▄▄▄▀▀▄▄▄▄▀");
     mvprintw(4, 1, "System thermal overview");
     attroff(COLOR_PAIR(1));
+
+    init_pair(2, COLOR_BLACK, COLOR_WHITE);
+    attron(COLOR_PAIR(2));
+    mvprintw(LINES-1, 1, " Press q to quit.");
+    attroff(COLOR_PAIR(2));
 }
 
 int main() {
     setlocale(LC_CTYPE, "");
     
-    initscr();
+    WINDOW *w = initscr();
     curs_set(0);
+    cbreak();
+    nodelay(w, TRUE);
 
     if (!has_colors()) {
         endwin();
@@ -89,7 +96,7 @@ int main() {
         fclose(f);
     }
 
-    while (1) {
+    while (getch() != 'q') {
         for (int i = 0; i < num_zones; ++i) {
             long temp = get_temp(paths[i]);
             mvprintw(5 + i, 1, "%s: %5ld", types[i], temp);
