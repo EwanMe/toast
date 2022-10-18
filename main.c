@@ -6,13 +6,17 @@
 #include <unistd.h>
 #include <wchar.h>
 #include <locale.h>
+#include <math.h>
 #include "ncurses.h"
 
-long get_temp(char *path) {
+float get_temp(char *path) {
     FILE *temp_file = fopen(path, "r");
-    long temp;
-    fscanf(temp_file, "%ld", &temp);
+    float temp;
+    fscanf(temp_file, "%f", &temp);
     fclose(temp_file);
+    
+    temp /= 1000;
+    temp = ceilf(temp * 100) / 100;
     return temp;
 }
 
@@ -98,8 +102,8 @@ int main() {
 
     while (getch() != 'q') {
         for (int i = 0; i < num_zones; ++i) {
-            long temp = get_temp(paths[i]);
-            mvprintw(5 + i, 1, "%s: %5ld", types[i], temp);
+            float temp = get_temp(paths[i]);
+            mvprintw(5 + i, 1, "%s: %.1f", types[i], temp);
             refresh();
         }
         sleep(1);
