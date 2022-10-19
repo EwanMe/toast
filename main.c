@@ -9,6 +9,18 @@
 #include <math.h>
 #include "ncurses.h"
 
+#define PAD 1
+
+#define PRIM_COLOR 1
+#define SECD_COLOR 2
+#define EXIT_COLOR 3
+
+#define NO_COL_W 4
+#define DR_COL_W 14
+#define TP_COL_W 6
+#define TMP_PREC 1
+
+
 float get_temp(char *path) {
     FILE *temp_file = fopen(path, "r");
     float temp;
@@ -44,19 +56,22 @@ int get_num_thermal_zones() {
 }
 
 void print_header() {
-    init_pair(1, COLOR_BLUE, COLOR_BLACK);
 
-    attron(COLOR_PAIR(1));
-    mvprintw(1, 1, "█─▄▄▄▄█▄─█─▄█─▄─▄─█─▄▄─█");
-    mvprintw(2, 1, "█▄▄▄▄─██▄─▄████─███─██─█");
-    mvprintw(3, 1, "▀▄▄▄▄▄▀▀▄▄▄▀▀▀▄▄▄▀▀▄▄▄▄▀");
-    mvprintw(4, 1, "System thermal overview");
-    attroff(COLOR_PAIR(1));
+    attron(COLOR_PAIR(PRIM_COLOR));
+    mvprintw(1, PAD, "_____  ___    __    __  _____ ");
+    mvprintw(2, PAD, " | |  / / \\  / /\\  ( (`  | |  ");
+    mvprintw(3, PAD, " |_|  \\_\\_/ /_/--\\ _)_)  |_|  ");
+    attroff(COLOR_PAIR(PRIM_COLOR));
 
-    init_pair(2, COLOR_BLACK, COLOR_WHITE);
-    attron(COLOR_PAIR(2));
+    attron(COLOR_PAIR(SECD_COLOR));
+    mvprintw(5, PAD, "%*s", NO_COL_W, "No");
+    mvprintw(5, PAD + NO_COL_W, "%*s", DR_COL_W, "Driver");
+    mvprintw(5, PAD + NO_COL_W + DR_COL_W, "%*s", TP_COL_W + TMP_PREC + PAD, "Temp ");
+    attroff(COLOR_PAIR(SECD_COLOR));
+
+    attron(COLOR_PAIR(EXIT_COLOR));
     mvprintw(LINES-1, 1, " Press q to quit.");
-    attroff(COLOR_PAIR(2));
+    attroff(COLOR_PAIR(EXIT_COLOR));
 }
 
 int main() {
@@ -64,8 +79,7 @@ int main() {
     
     WINDOW *w = initscr();
     curs_set(0);
-    cbreak();
-    nodelay(w, TRUE);
+
 
     if (!has_colors()) {
         endwin();
@@ -75,6 +89,12 @@ int main() {
     
     if (start_color() < 0) perror("Could not enable colors");
     
+    
+    init_pair(PRIM_COLOR, COLOR_BLUE, COLOR_BLACK);
+    init_pair(SECD_COLOR, COLOR_BLACK, COLOR_BLUE);
+    init_pair(EXIT_COLOR, COLOR_BLACK, COLOR_WHITE);
+
+
     print_header();
     
     int num_zones = get_num_thermal_zones();
@@ -100,10 +120,17 @@ int main() {
         fclose(f);
     }
 
+    // getch non-blocking
+    cbreak();
+    nodelay(w, TRUE);
+
     while (getch() != 'q') {
         for (int i = 0; i < num_zones; ++i) {
             float temp = get_temp(paths[i]);
-            mvprintw(5 + i, 1, "%s: %.1f", types[i], temp);
+            
+            mvprintw(6 + i, PAD, "%*d", NO_COL_W, i);
+            mvprintw(6 + i, PAD + NO_COL_W, " %*s", DR_COL_W, types[i]);
+            mvprintw(6 + i, PAD + NO_COL_W + DR_COL_W, " %*.*f", TP_COL_W, TMP_PREC, temp);
             refresh();
         }
         sleep(1);
