@@ -20,6 +20,14 @@
 #define TP_COL_W 6
 #define TMP_PREC 1
 
+struct thermal_info {
+    char **paths;
+    char **types;
+    int num_zones;
+};
+
+struct thermal_info thrm_info;
+
 
 float get_temp(char *path) {
     FILE *temp_file = fopen(path, "r");
@@ -74,77 +82,76 @@ void print_header() {
     attroff(COLOR_PAIR(EXIT_COLOR));
 }
 
-int main() {
-    setlocale(LC_CTYPE, "");
-    
-    WINDOW *w = initscr();
-    curs_set(0);
-
-
-    if (!has_colors()) {
-        endwin();
-        perror("Your terminal does not support colors");
-        exit(EXIT_FAILURE);
-    }
-    
-    if (start_color() < 0) perror("Could not enable colors");
-    
-    
-    init_pair(PRIM_COLOR, COLOR_BLUE, COLOR_BLACK);
-    init_pair(SECD_COLOR, COLOR_BLACK, COLOR_BLUE);
-    init_pair(EXIT_COLOR, COLOR_BLACK, COLOR_WHITE);
-
-
-    print_header();
-    
-    int num_zones = get_num_thermal_zones();
-
-    char **paths = malloc(num_zones * sizeof(char *));
-    char **types = malloc(num_zones * sizeof(char *));
-
+void get_thermal_zones() {
     const char *base_p = "/sys/class/thermal/thermal_zone";
     
-    for (int i = 0; i < num_zones; ++i) {
+    for (int i = 0; i < thrm_info.num_zones; ++i) {
         int path_len = strlen(base_p) + strlen("/temp") + 3;
-        paths[i] = malloc(path_len * sizeof (char));
-        snprintf(paths[i], path_len, "%s%d/temp", base_p, i);
+        thrm_info.paths[i] = malloc(path_len * sizeof (char));
+        snprintf(thrm_info.paths[i], path_len, "%s%d/temp", base_p, i);
         
         char *type_p = malloc(path_len * sizeof (char));
         snprintf(type_p, path_len, "%s%d/type", base_p, i);
 
         FILE *f = fopen(type_p, "r");
         
-        types[i] = malloc(64);
-        memset(types[i], 0x00, 64);
-        fscanf(f, "%s", types[i]);
+        thrm_info.types[i] = malloc(64);
+        memset(thrm_info.types[i], 0x00, 64);
+        fscanf(f, "%s", thrm_info.types[i]);
         fclose(f);
     }
+}
 
-    // getch non-blocking
-    cbreak();
-    nodelay(w, TRUE);
-
-    while (getch() != 'q') {
-        for (int i = 0; i < num_zones; ++i) {
-            float temp = get_temp(paths[i]);
+void run() {
+    while (1) {
+        for (int i = 0; i < thrm_info.num_zones; ++i) {
+            if (getch() == 'q') return;
+            
+            float temp = get_temp(thrm_info.paths[i]);
             
             mvprintw(6 + i, PAD, "%*d", NO_COL_W, i);
-            mvprintw(6 + i, PAD + NO_COL_W, " %*s", DR_COL_W, types[i]);
+            mvprintw(6 + i, PAD + NO_COL_W, " %*s", DR_COL_W, thrm_info.types[i]);
             mvprintw(6 + i, PAD + NO_COL_W + DR_COL_W, " %*.*f", TP_COL_W, TMP_PREC, temp);
             refresh();
         }
         sleep(1);
     }
+}
 
-    for (int i = 0; i < num_zones; ++i) {
-        free(paths[i]);
-    }
-    free(paths);
+int main() {
+    setlocale(LC_CTYPE, "");
+    WINDOW *w = initscr();
+    curs_set(0);
+    // getch non-blocking
+    cbreak();
+    nodelay(w, TRUE);
 
-    for (int i = 0; i < num_zones; ++i) {
-        free(types[i]);
+    if (!has_colors()) {
+        endwin();
+        perror("Your terminal does not support colors");
+        exit(EXIT_FAILURE);
     }
-    free(types);
+    if (start_color() < 0) perror("Could not enable colors");
+    
+    init_pair(PRIM_COLOR, COLOR_BLUE, COLOR_BLACK);
+    init_pair(SECD_COLOR, COLOR_BLACK, COLOR_BLUE);
+    init_pair(EXIT_COLOR, COLOR_BLACK, COLOR_WHITE);
+
+    print_header();
+    
+    thrm_info.num_zones = get_num_thermal_zones();
+    thrm_info.paths = malloc(thrm_info.num_zones * sizeof(char *));
+    thrm_info.types = malloc(thrm_info.num_zones * sizeof(char *));
+    get_thermal_zones(thrm_info.paths, thrm_info.types, thrm_info.num_zones);
+
+    run();
+
+    for (int i = 0; i < thrm_info.num_zones; ++i) {
+        free(thrm_info.paths[i]);
+        free(thrm_info.types[i]);
+    }
+    free(thrm_info.paths);
+    free(thrm_info.types);
 
     curs_set(1);
     endwin();
