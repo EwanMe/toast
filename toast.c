@@ -1,12 +1,14 @@
-#include <sys/types.h>
 #include <dirent.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <wchar.h>
 #include <locale.h>
 #include <math.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <wchar.h>
+
 #include "ncurses.h"
 
 #define PAD 1
@@ -20,14 +22,18 @@
 #define TP_COL_W 6
 #define TMP_PREC 1
 
+struct curses_info {
+    WINDOW *window;
+    int old_cursor;
+};
+struct curses_info c_info;
+
 struct thermal_info {
     char **paths;
     char **types;
     int num_zones;
 };
-
 struct thermal_info thrm_info;
-
 
 float get_temp(char *path) {
     FILE *temp_file = fopen(path, "r");
@@ -105,7 +111,6 @@ void get_thermal_zones() {
 void run() {
     while (1) {
         for (int i = 0; i < thrm_info.num_zones; ++i) {
-            if (getch() == 'q') return;
             
             float temp = get_temp(thrm_info.paths[i]);
             
@@ -114,17 +119,19 @@ void run() {
             mvprintw(6 + i, PAD + NO_COL_W + DR_COL_W, " %*.*f", TP_COL_W, TMP_PREC, temp);
             refresh();
         }
-        sleep(1);
+        timeout(1000);
+        if (getch() == 'q') return;
     }
 }
 
-int main() {
+void start_curses() {
+    if ((c_info.window = initscr()) == NULL) {
+        perror("Could not initialize window");
+    }
+    c_info.old_cursor = curs_set(0);
+
+    // For utf-8
     setlocale(LC_CTYPE, "");
-    WINDOW *w = initscr();
-    curs_set(0);
-    // getch non-blocking
-    cbreak();
-    nodelay(w, TRUE);
 
     if (!has_colors()) {
         endwin();
@@ -136,6 +143,26 @@ int main() {
     init_pair(PRIM_COLOR, COLOR_BLUE, COLOR_BLACK);
     init_pair(SECD_COLOR, COLOR_BLACK, COLOR_BLUE);
     init_pair(EXIT_COLOR, COLOR_BLACK, COLOR_WHITE);
+}
+
+void stop_curses() {
+    delwin(c_info.window);
+    curs_set(c_info.old_cursor);
+    endwin();
+    refresh();
+}
+
+void cleanup() {
+    for (int i = 0; i < thrm_info.num_zones; ++i) {
+        free(thrm_info.paths[i]);
+        free(thrm_info.types[i]);
+    }
+    free(thrm_info.paths);
+    free(thrm_info.types);
+}
+
+int main() {
+    start_curses();
 
     print_header();
     
@@ -146,14 +173,6 @@ int main() {
 
     run();
 
-    for (int i = 0; i < thrm_info.num_zones; ++i) {
-        free(thrm_info.paths[i]);
-        free(thrm_info.types[i]);
-    }
-    free(thrm_info.paths);
-    free(thrm_info.types);
-
-    curs_set(1);
-    endwin();
-    return 0;
+    stop_curses();
+    cleanup();
 }
