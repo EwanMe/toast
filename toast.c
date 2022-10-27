@@ -69,18 +69,33 @@ int get_num_thermal_zones() {
     return num_zones;
 }
 
-void print_header() {
+void print_logo() {
+    FILE* f = fopen("../img/logo.txt", "r");
+    if (f == NULL) {
+        perror("Could not read logo file");
+    }
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    int i = 0;
 
     attron(COLOR_PAIR(PRIM_COLOR));
-    mvprintw(1, PAD, "_____  ___    __    __  _____ ");
-    mvprintw(2, PAD, " | |  / / \\  / /\\  ( (`  | |  ");
-    mvprintw(3, PAD, " |_|  \\_\\_/ /_/--\\ _)_)  |_|  ");
+    while ((read = getline(&line, &len, f)) != -1) {
+        mvprintw(i + 1, 40, "%s", line);
+        i++;
+    }
     attroff(COLOR_PAIR(PRIM_COLOR));
 
+    fclose(f);
+    if (line) free(line);
+}
+
+void print_header() {
     attron(COLOR_PAIR(SECD_COLOR));
-    mvprintw(5, PAD, "%*s", NO_COL_W, "No");
-    mvprintw(5, PAD + NO_COL_W, "%*s", DR_COL_W, "Driver");
-    mvprintw(5, PAD + NO_COL_W + DR_COL_W, "%*s", TP_COL_W + TMP_PREC + PAD, "Temp ");
+    mvprintw(1, PAD, "%*s", NO_COL_W, "No");
+    mvprintw(1, PAD + NO_COL_W, "%*s", DR_COL_W, "Driver");
+    mvprintw(1, PAD + NO_COL_W + DR_COL_W, "%*s", TP_COL_W + TMP_PREC + PAD, "Temp ");
     attroff(COLOR_PAIR(SECD_COLOR));
 
     attron(COLOR_PAIR(EXIT_COLOR));
@@ -114,9 +129,9 @@ void run() {
             
             float temp = get_temp(thrm_info.paths[i]);
             
-            mvprintw(6 + i, PAD, "%*d", NO_COL_W, i);
-            mvprintw(6 + i, PAD + NO_COL_W, " %*s", DR_COL_W, thrm_info.types[i]);
-            mvprintw(6 + i, PAD + NO_COL_W + DR_COL_W, " %*.*f", TP_COL_W, TMP_PREC, temp);
+            mvprintw(2 + i, PAD, "%*d", NO_COL_W, i);
+            mvprintw(2 + i, PAD + NO_COL_W, " %*s", DR_COL_W, thrm_info.types[i]);
+            mvprintw(2 + i, PAD + NO_COL_W + DR_COL_W, " %*.*f", TP_COL_W, TMP_PREC, temp);
             refresh();
         }
         timeout(1000);
@@ -162,9 +177,11 @@ void cleanup() {
 }
 
 int main() {
+    setlocale(LC_ALL, "");
     start_curses();
 
     print_header();
+    print_logo();
     
     thrm_info.num_zones = get_num_thermal_zones();
     thrm_info.paths = malloc(thrm_info.num_zones * sizeof(char *));
