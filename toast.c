@@ -97,7 +97,9 @@ void print_header() {
     mvprintw(1, PAD + NO_COL_W, "%*s", DR_COL_W, "Driver");
     mvprintw(1, PAD + NO_COL_W + DR_COL_W, "%*s", TP_COL_W + TMP_PREC + PAD, "Temp ");
     attroff(COLOR_PAIR(SECD_COLOR));
+}
 
+void print_quit_info() {
     attron(COLOR_PAIR(EXIT_COLOR));
     mvprintw(LINES-1, 1, " Press q to quit.");
     attroff(COLOR_PAIR(EXIT_COLOR));
@@ -135,7 +137,12 @@ void run() {
             refresh();
         }
         timeout(1000);
-        if (getch() == 'q') return;
+        int ch = getch();
+        if (ch == 'q') return;
+        else if (ch == KEY_RESIZE) {
+            print_quit_info();
+        }
+
     }
 }
 
@@ -181,6 +188,7 @@ int main() {
     start_curses();
 
     print_header();
+    print_quit_info();
     print_logo();
     
     thrm_info.num_zones = get_num_thermal_zones();
