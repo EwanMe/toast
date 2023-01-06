@@ -70,7 +70,7 @@ int get_num_thermal_zones() {
 }
 
 void print_logo() {
-    FILE* f = fopen("../img/logo.txt", "r");
+    FILE* f = fopen("./img/logo.txt", "r");
     if (f == NULL) {
         perror("Could not read logo file");
     }
