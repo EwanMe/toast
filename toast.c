@@ -22,6 +22,25 @@
 #define TP_COL_W 6
 #define TMP_PREC 1
 
+char toast_logo[] = "\
+          .,,,,,,,,,,,,,,,#&&&&&&&&,,,,.    \n\
+   ,,,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&,,   \n\
+  ,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&,,* \n\
+,,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&%,,%\n\
+.,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&,,,%\n\
+,,&&&&&&&&&&&&&&&&&&&&&&&&&&,,,&&&&&&&&,,,,%\n\
+  ,,&&&&&&&&,,,&&&&&&&&&&&&&&&&&&&&&&&,,,%% \n\
+    ,,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&,,,%. \n\
+    ,,&&&&&&&&&&&&&&&&&&&,&&&&&&&&&&&&*,,%  \n\
+     ,&&&&&&&&&&&&,,&&&&*,&&&&&&&&&&&&&,,%  \n\
+     ,&&&&&&&&&&&&&&&,,*&&&&&&&&&&&&&&&,,,% \n\
+     ,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&,,,% \n\
+     ,,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&,,,% \n\
+     ,,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&(,,% \n\
+      ,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&,,,% \n\
+      ,&&&&&&&&/,,,,,,,,,,,,,,,,,,,,,,,,,,% \n\
+        ,,,,,,,,,,(%%%%%%%%%%%%%(,,,,,,,.." ;
+
 struct curses_info {
     WINDOW *window;
     int old_cursor;
@@ -70,25 +89,18 @@ int get_num_thermal_zones() {
 }
 
 void print_logo() {
-    FILE* f = fopen("./img/logo.txt", "r");
-    if (f == NULL) {
-        perror("Could not read logo file");
-    }
-
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t read;
-    int i = 0;
-
     attron(COLOR_PAIR(PRIM_COLOR));
-    while ((read = getline(&line, &len, f)) != -1) {
-        mvprintw(i + 1, 40, "%s", line);
-        i++;
-    }
-    attroff(COLOR_PAIR(PRIM_COLOR));
+    
+    int i = 0;
+    char *line = strtok(toast_logo, "\n");
 
-    fclose(f);
-    if (line) free(line);
+    while (line != NULL) {
+        mvprintw(i + 1, 40, "%s", line);
+	line = strtok(NULL, "\n");
+	i++;
+    }
+
+    attroff(COLOR_PAIR(PRIM_COLOR));
 }
 
 void print_header() {
@@ -200,4 +212,5 @@ int main() {
 
     stop_curses();
     cleanup();
+    return 0;
 }
