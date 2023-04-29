@@ -85,6 +85,7 @@ int get_num_thermal_zones() {
             }
         }
     }
+    free(dp);
     return num_zones;
 }
 
@@ -129,6 +130,7 @@ void get_thermal_zones() {
         snprintf(type_p, path_len, "%s%d/type", base_p, i);
 
         FILE *f = fopen(type_p, "r");
+	free(type_p);
         
         thrm_info.types[i] = malloc(64);
         memset(thrm_info.types[i], 0x00, 64);
